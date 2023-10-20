@@ -8,6 +8,7 @@ const server = net.createServer((socket) => {
   socket.on("data", (data) => {
     let path = data.toString().split(" ");
     let agent = data.toString().split("\r\n")[2];
+    let requestMethod = path[0];
 
     if (path[1] === "/") {
       socket.write("HTTP/1.1 200 OK\r\n\r\n");
@@ -27,14 +28,20 @@ const server = net.createServer((socket) => {
       let fileName = path[1].slice(7);
       let filePath = `${dir}${fileName}`;
 
-      if (fs.existsSync(filePath)) {
-        let data = fs.readFileSync(filePath, "utf-8");
+      if (requestMethod === "GET") {
+        if (fs.existsSync(filePath)) {
+          let data = fs.readFileSync(filePath, "utf-8");
 
-        socket.write(
-          `HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ${data.length}\r\n\r\n${data}`
-        );
-      } else {
-        socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+          socket.write(
+            `HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ${data.length}\r\n\r\n${data}`
+          );
+        } else {
+          socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+        }
+      } else if (requestMethod === "POST") {
+        let body = data.toString().split("\r\n\r\n")[1];
+        fs.writeFileSync(filePath, body);
+        socket.write("HTTP/1.1 201 OK\r\n\r\n");
       }
     } else {
       socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
